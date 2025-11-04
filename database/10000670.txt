@@ -1,0 +1,5 @@
+Username: Dickson
+ID: 1088689216
+Account No: 10000670
+Account Type: 1
+Amount: 0.00

@@ -1,0 +1,5 @@
+Username:Dickson
+ID: 41122
+Account No: 10003051
+Account Type: 1
+Amount: 0.00
