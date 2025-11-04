@@ -1,3 +1,0 @@
-Username: ps
-Password: 1122h
-Balance: 0.00
