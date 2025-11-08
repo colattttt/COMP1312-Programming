@@ -1,5 +1,10 @@
 {
     "files.associations": {
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "time.h": "c",
+        "string.h": "c",
+        "stdlib.h": "c",
+        "banking.h": "c",
+        "deleteaccount.h": "c"
     }
 }
