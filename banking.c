@@ -261,11 +261,6 @@ void deleteAccount()
         return;
     }
 
-    char accnos[100][20];     // store account numbers
-    char usernames[100][50];  // store usernames
-    int total = 0;
-
-    // Read all accounts from index.txt
     char accno[20], username[50];
     while (fscanf(fp_index, "%19s %49s", accno, username) == 2)
     {
