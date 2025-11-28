@@ -21,14 +21,14 @@ void clearLine() {
     }
 }
 
-int getPIN(char pinOut[5]) 
+int getPIN(char savedPIN[5]) 
 {
-    char buf[10];
+    char enteredPIN[10];
 
     printf("Enter 4-digit PIN: ");
-    scanf("%9s", buf);
+    scanf("%9s", enteredPIN);
 
-    if (strlen(buf) != 4) 
+    if (strlen(enteredPIN) != 4) 
     {
         printf("PIN must be 4 digits!\n");
         while (getchar() != '\n');  
@@ -37,14 +37,15 @@ int getPIN(char pinOut[5])
 
     for (int i = 0; i < 4; i++) 
     {
-        if (!isdigit(buf[i])) 
+        if (!isdigit(enteredPIN[i])) 
         {
             printf("Invalid PIN! PIN must contain digits only.\n");
             while (getchar() != '\n'); 
             return 0;
         }
     }
-    strcpy(pinOut, buf);
+
+    strcpy(savedPIN, enteredPIN);
     return 1;
 }
 
@@ -65,6 +66,84 @@ int chooseInt(const char *prompt, int min, int max) {
     return x;  
 }
 
+float getValidAmount(const char *prompt) {
+    float amt;
+    printf("%s", prompt);
+    if (scanf("%f", &amt) != 1) {
+        clearLine();
+        return -1;
+    }
+    if (amt <= 0 || amt > 50000) return -1;
+    return amt;
+}
+
+int selectAccount(char accOut[20]) {
+    FILE *fp = fopen("database/index.txt", "r");
+    if (!fp) 
+    {
+        printf("No accounts found.\n");
+        return 0;
+    }
+
+    char acc[100][20], name[100][50];
+    int count = 0;
+
+    while (fscanf(fp, "%19s %49s", acc[count], name[count]) == 2) 
+    {
+        count++;
+    }
+    fclose(fp);
+
+    if (count == 0) 
+    {
+        printf("No accounts found.\n");
+        return 0;
+    }
+
+    printf("\nAvailable accounts (1-%d):\n", count);
+    for (int i = 0; i < count; i++) 
+    {
+        printf("%d. %s (%s)\n", i + 1, acc[i], name[i]);
+    }
+
+    int choice = chooseInt("Select account: ", 1, count);
+
+    if (choice == -1) 
+    {
+        printf("Invalid choice. Please enter a number between 1 and %d.\n", count);
+        return 0;
+    }
+
+    strcpy(accOut, acc[choice - 1]);
+    return 1;
+}
+
+int authenticateAccount(const char *accno, float *returnedBalance, char *returnedType) {
+    char filePIN[20], userPIN[5], type[20];
+    float balance;
+
+    loadAccountInfo(accno, NULL, filePIN, type, &balance);
+
+    if (!getPIN(userPIN)) {
+        printf("Invalid PIN.\n");
+        return 0;
+    }
+
+    if (strcmp(userPIN, filePIN) != 0) {
+        printf("Incorrect PIN.\n");
+        return 0;
+    }
+
+    if (returnedBalance != NULL) {
+        *returnedBalance = balance;
+    }
+
+    if (returnedType != NULL) {
+        strcpy(returnedType, type);
+    }
+
+    return 1;
+}
 
 void logTransaction(const char *msg) {
     FILE *fp = fopen("database/transaction.log", "a");
@@ -121,7 +200,7 @@ void createAccount()
     char username[50], id[20], pin[5];
     int type;
 
-    printf("\n----- Create Bank Account  -----\n");
+    printf("\n---------- Create Bank Account ----------\n");
     printf("\nEnter your username: ");
     // Allow up to 49 characters for a string. To avoid crash or memory error if the user types too many characters.
     scanf("%49s", username);
@@ -244,112 +323,49 @@ void createAccount()
 
 void deleteAccount()
 {
-    char accno[20], username[50];
-    char listacc[100][20];
-    int option = 0, count = 0;
-    char selectedAcc[20];
+    char accno[20];
 
-    FILE *fp = fopen("database/index.txt", "r");
-    if (!fp)
+    printf("\n---------- Delete Bank Account ----------\n");
+    if (!selectAccount(accno)) 
     {
-        printf("No accounts found.\n");
         return;
     }
 
-    printf("\n----- Delete Bank Account -----\n");
-    while (fscanf(fp, "%s %s", accno, username) == 2)
-    {   
-        strcpy(listacc[count], accno);
-        count++;
-    }
-    fclose(fp);
+    char fileID[20], pin[20], type[20];
+    float bal;
+    loadAccountInfo(accno, fileID, pin, type, &bal);
 
-    if (count == 0)
-    {
-        printf("No accounts found.\n");
-        return;
-    }
-
-    printf("Please choose an option (1-%d):\n\n", count);
-
-    // Open again to show accounts
-    fp = fopen("database/index.txt", "r");
-    int i = 1;
-    while (fscanf(fp, "%s %s", accno, username) == 2)
-    {
-        printf("%d. %s (%s)\n", i, accno, username);
-        i++;
-    }
-    fclose(fp);
-
-    printf("\nSelect option: ");
-    scanf("%d", &option);
-
-    if (option < 1 || option > count)
-    {
-        printf("Invalid choice.\n");
-        return;
-    }
-
-    // Selected account number
-    strcpy(selectedAcc, listacc[option - 1]);
-
-    // Ask for ID last 4 digits + PIN
-    char lastID[5], pin[5];
+    char last4[5];
     printf("Enter last 4 digits of ID: ");
-    scanf("%4s", lastID);
-    printf("Enter 4-digit PIN: ");
-    scanf("%4s", pin);
+    scanf("%4s", last4);
 
-    // Open the selected account file
+    if (strlen(fileID) < 4 || strcmp(last4, fileID + strlen(fileID) - 4) != 0) {
+        printf("ID mismatch.\n");
+        return;
+    }
+
+    if (!authenticateAccount(accno, NULL, NULL)) {
+        return;
+    }
+
     char filepath[100];
-    sprintf(filepath, "database/%s.txt", selectedAcc);
+    sprintf(filepath, "database/%s.txt", accno);
 
-    FILE *accFile = fopen(filepath, "r");
-    if (!accFile)
-    {
-        printf("Account not found.\n");
+    if (remove(filepath) != 0) {
+        printf("Failed to delete account file.\n");
         return;
     }
 
-    // Read stored ID and PIN
-    char storedID[20] = "", storedPIN[10] = "";
-    char line[100];
-
-    while (fgets(line, sizeof(line), accFile))
-    {
-        sscanf(line, "ID: %19s", storedID);
-        sscanf(line, "PIN: %9s", storedPIN);
-    }
-    fclose(accFile);
-
-    // Validate last 4 digits and PIN
-    int len = strlen(storedID);
-    if (len < 4 || strcmp(lastID, storedID + len - 4) != 0 || strcmp(pin, storedPIN) != 0)
-    {
-        printf("Wrong ID digits or PIN. Delete unsuccessful.\n");
-        return;
-    }
-
-    // Delete account file
-    if (remove(filepath) == 0)
-    {
-        printf("Account file deleted.\n");
-    }
-    else
-    {
-        printf("Failed to delete file.\n");
-        return;
-    }
+    printf("Account file deleted.\n");
 
     FILE *old = fopen("database/index.txt", "r");
     FILE *temp = fopen("database/temp.txt", "w");
 
-    while (fscanf(old, "%19s %49s", accno, username) == 2)
-    {
-        if (strcmp(accno, selectedAcc) != 0)
-        {
-            fprintf(temp, "%s %s\n", accno, username);
+    char idAcc[20], username[50];
+
+    while (fscanf(old, "%19s %49s", idAcc, username) == 2) {
+        if (strcmp(idAcc, accno) != 0) {
+            fprintf(temp, "%s %s\n", idAcc, username);
         }
     }
 
