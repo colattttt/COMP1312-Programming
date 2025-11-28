@@ -12,6 +12,60 @@ void remittance();
 void showSessionInfo();
 void logTransaction(const char *msg);
 
+void clearLine() {
+    int c;
+
+    while ((c = getchar()) != '\n' && c != EOF) 
+    {
+
+    }
+}
+
+int getPIN(char pinOut[5]) 
+{
+    char buf[10];
+
+    printf("Enter 4-digit PIN: ");
+    scanf("%9s", buf);
+
+    if (strlen(buf) != 4) 
+    {
+        printf("PIN must be 4 digits!\n");
+        while (getchar() != '\n');  
+        return 0;
+    }
+
+    for (int i = 0; i < 4; i++) 
+    {
+        if (!isdigit(buf[i])) 
+        {
+            printf("Invalid PIN! PIN must contain digits only.\n");
+            while (getchar() != '\n'); 
+            return 0;
+        }
+    }
+    strcpy(pinOut, buf);
+    return 1;
+}
+
+int chooseInt(const char *prompt, int min, int max) {
+    int x;
+
+    printf("%s", prompt);
+
+    if (scanf("%d", &x) != 1) {
+        clearLine();  
+        return -1;
+    }
+
+    if (x < min || x > max) {
+        return -1;
+    }
+
+    return x;  
+}
+
+
 void logTransaction(const char *msg) {
     FILE *fp = fopen("database/transaction.log", "a");
     if (!fp) return;
@@ -35,148 +89,59 @@ void showSessionInfo() {
     printf("-----------------------------------------\n");
 }
 
-int isLettersOnly(char *str)
+int loadAccountInfo(const char *accno, char *id, char *pin, char *type, float *amt)
 {
-    int i = 0;
-    while (str[i] != '\0')
-    {
-        if (!((str[i] >= 'A' && str[i] <= 'Z') ||
-              (str[i] >= 'a' && str[i] <= 'z')))
-        {
-            return 0; //Found non-letter
-        }
-        i++;
-    }
-    return 1; //All letters
-}
-
-int accountExists(char *id, int type)
-{
-    FILE *fp = fopen("database/index.txt", "r");
+    char path[100];
+    sprintf(path, "database/%s.txt", accno);
+    FILE *fp = fopen(path, "r");
     if (!fp) return 0;
 
-    char accno[20], username[50];
-    char filepath[100];
-    char file_id[20] = "";
-    char file_type[20] = "";
-    char wantedType[20];
     char line[200];
+    char ID[20] = "", PIN[20] = "", TYPE[20] = "";
+    float AMT = 0;
 
-    if (type == 1)
-        strcpy(wantedType, "Savings");
-    else
-        strcpy(wantedType, "Current");
-
-    while (fscanf(fp, "%s %s", accno, username) == 2)
-    {
-        sprintf(filepath, "database/%s.txt", accno);
-
-        FILE *acc = fopen(filepath, "r");
-        if (!acc)
-            continue;
-
-        file_id[0] = '\0';
-        file_type[0] = '\0';
-
-        while (fgets(line, sizeof(line), acc))
-        {
-            sscanf(line, "ID: %19s", file_id);
-            sscanf(line, "Account Type: %19s", file_type);
-        }
-        fclose(acc);
-
-        if (strcmp(file_id, id) == 0 && strcmp(file_type, wantedType) == 0)
-        {
-            fclose(fp);
-            return 1;
-        }
+    while (fgets(line, sizeof(line), fp)) {
+        sscanf(line, "ID: %19s", ID);
+        sscanf(line, "PIN: %19s", PIN);
+        sscanf(line, "Account Type: %19s", TYPE);
+        sscanf(line, "Amount: %f", &AMT);
     }
-
     fclose(fp);
-    return 0;
-}
 
-void input()
-{
-    char input[20];
+    if (id) strcpy(id, ID);
+    if (pin) strcpy(pin, PIN);
+    if (type) strcpy(type, TYPE);
+    if (amt) *amt = AMT;
 
-    while (1)
-    {
-        printf("\n---------- Main Menu & Session ----------\n");
-        printf("1. Create New Bank Account\n");
-        printf("2. Delete Bank Account\n");
-        printf("3. Deposit\n");
-        printf("4. Withdrawal\n");
-        printf("5. Remittance\n");
-        printf("6. Quit\n");
-        printf("Enter your choice: ");
-        scanf("%19s", &input);
-
-        if (strcmp(input,"1") == 0 || strcasecmp(input,"create") == 0)
-        {
-            logTransaction("Create Account");
-            createAccount();
-        }
-        else if (strcmp(input, "2") == 0 || strcasecmp(input,"delete") == 0)
-        {
-            logTransaction("Delete Bank Account");
-            deleteAccount();
-        }
-        else if (strcmp(input, "3") == 0 || strcasecmp(input,"deposit") == 0)
-        {
-            logTransaction("Deposit");
-            deposit();
-        }
-        else if (strcmp(input, "4") == 0 || strcasecmp(input,"withdrawal") == 0)
-        {
-            logTransaction("Withdrawal");
-            withdrawal();
-        }
-        else if (strcmp(input, "5") == 0 || strcasecmp(input,"remittance") == 0)
-        {
-            logTransaction("Remittance");
-            remittance();
-        }
-        else if (strcmp(input, "6") == 0 || strcasecmp(input,"quit") == 0)
-        {
-            logTransaction("Exit");
-            printf("Exiting program. Goodbye!\n");
-            exit(0);
-        }
-        else
-        {
-            printf("Invalid choice. Please try again.\n");
-        }  
-    }
+    return 1;
 }
 
 void createAccount()
 {
-    char username[50], filepath[100], id[20], pin[5], acctype[20];
-    int type, accno;
-    FILE *fp;
+    char username[50], id[20], pin[5];
+    int type;
 
     printf("\n----- Create Bank Account  -----\n");
     printf("\nEnter your username: ");
     // Allow up to 49 characters for a string. To avoid crash or memory error if the user types too many characters.
     scanf("%49s", username);
 
-    if (!isLettersOnly(username))
+    for (int i = 0; username[i]; i++)
     {
-        printf("Username must contain letters only!\n");
-        return;
+        if (!isalpha(username[i])) {
+            printf("Username must contain letters only!\n");
+            return;
+        }
     }
 
     printf("Enter your ID: ");
     scanf("%19s", id);
 
     // Validate digits only
-    for (int i = 0; id[i] != '\0'; i++)
+    for (int i = 0; id[i]; i++)
     {
-        if (id[i] < '0' || id[i] > '9')
-        {
+        if (!isdigit(id[i])) {
             printf("Invalid ID! Must contain numbers only.\n");
-            while(getchar()!='\n'); // clear buffer
             return;
         }
     }
@@ -184,61 +149,61 @@ void createAccount()
     printf("Enter Account Type:");
     printf("\n1. Savings Account");
     printf("\n2. Current Account");
-    printf("\nSelect Option: ");
-    if (scanf("%d", &type) != 1 || (type != 1 && type != 2))
-    {
-        printf("Invalid account type! Select 1 or 2.\n");
-        while(getchar()!='\n');
-        return; // restart
+    type = chooseInt("Enter account type: ", 1, 2);
+    if (type == -1) {
+        return;
     }
 
-    if (type == 1)
+    char acctype[20];
+    if (type == 1) {
         strcpy(acctype, "Savings");
-    else
+    } else {
         strcpy(acctype, "Current");
-    
-
-    // Check if account already exists
-    if (accountExists(id, type))
-    {
-        printf("You already have this type of account!\n");
-        return;
-    }
-        
-    printf("Enter your 4-digit PIN: ");
-    scanf("%9s", pin);
-
-    if (strlen(pin) != 4)
-    {
-        printf("PIN must be 4 digits!\n");
-        while (getchar() != '\n'); 
-        return;
     }
 
-    // Validate 4 digits
-    for (int i = 0; i < 4; i++)
+    // Check if this ID already has this type
+    FILE *fp = fopen("database/index.txt", "r");
+    char acc[20], name[50];
+
+    if (fp) 
     {
-        if (pin[i] < '0' || pin[i] > '9')
+        while (fscanf(fp, "%19s %49s", acc, name) == 2) 
         {
-            printf("Invalid PIN! PIN must contain digits only.\n");
-            while(getchar()!='\n');
-            return;
+            char fileID[20], fileType[20];
+            loadAccountInfo(acc, fileID, NULL, fileType, NULL);
+            if (strcmp(id, fileID) == 0 && strcmp(fileType, acctype) == 0) 
+            {
+                printf("You already have this type of account.\n");
+                fclose(fp);
+                return;
+            }
         }
+        fclose(fp);
+    }
+    
+    if (!getPIN(pin)) {
+    return;
     }
 
-    // Generate random unique account number
-    srand((unsigned int)time(NULL));
-    do
-    {
-        accno = (rand() % 900000000) + 10000000; 
-        sprintf(filepath, "database/%d.txt", accno);
-        fp = fopen(filepath, "r");
-        if (fp != NULL) fclose(fp);
+    // Generate unique account number
+    srand(time(NULL));
+    int accno;
+    char path[100];
+    
+    do {
+        accno = (rand() % 90000000) + 10000000;
+        sprintf(path, "database/%d.txt", accno);
+
+        fp = fopen(path, "r");
+        if (fp != NULL) {
+            fclose(fp);
+            fp = NULL; 
+        }
     } 
     while (fp != NULL);
 
     // Create new user file
-    fp = fopen(filepath, "w");
+    fp = fopen(path, "w");
     if (!fp) 
     {
         printf("Error: Could not create account file.\n");
@@ -829,6 +794,61 @@ void remittance()
     printf("Fee charged: RM %.2f\n", fee);
     printf("Sender new balance: RM %.2f\n", senderBalance);
     printf("Receiver new balance: RM %.2f\n", receiverBalance);
+}
+
+void input()
+{
+    char input[20];
+
+    while (1)
+    {
+        showSessionInfo();
+        printf("\n---------- Main Menu & Session ----------\n");
+        printf("1. Create New Bank Account\n");
+        printf("2. Delete Bank Account\n");
+        printf("3. Deposit\n");
+        printf("4. Withdrawal\n");
+        printf("5. Remittance\n");
+        printf("6. Quit\n");
+        printf("Enter your choice: ");
+        scanf("%19s", &input);
+
+        if (strcmp(input,"1") == 0 || strcasecmp(input,"create") == 0)
+        {
+            logTransaction("Create Account");
+            createAccount();
+        }
+        else if (strcmp(input, "2") == 0 || strcasecmp(input,"delete") == 0)
+        {
+            logTransaction("Delete Bank Account");
+            deleteAccount();
+        }
+        else if (strcmp(input, "3") == 0 || strcasecmp(input,"deposit") == 0)
+        {
+            logTransaction("Deposit");
+            deposit();
+        }
+        else if (strcmp(input, "4") == 0 || strcasecmp(input,"withdrawal") == 0)
+        {
+            logTransaction("Withdrawal");
+            withdrawal();
+        }
+        else if (strcmp(input, "5") == 0 || strcasecmp(input,"remittance") == 0)
+        {
+            logTransaction("Remittance");
+            remittance();
+        }
+        else if (strcmp(input, "6") == 0 || strcasecmp(input,"quit") == 0)
+        {
+            logTransaction("Exit");
+            printf("Exiting program. Goodbye!\n");
+            exit(0);
+        }
+        else
+        {
+            printf("Invalid choice. Please try again.\n");
+        }  
+    }
 }
 
 int main()
