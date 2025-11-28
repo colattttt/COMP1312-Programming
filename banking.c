@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <time.h>
 
 void createAccount();
@@ -9,39 +10,28 @@ void deposit();
 void withdrawal();
 void remittance();
 void showSessionInfo();
-void logTransaction(const char *response);
+void logTransaction(const char *msg);
 
-void logTransaction(const char *response)
-{
+void logTransaction(const char *msg) {
     FILE *fp = fopen("database/transaction.log", "a");
-    if (!fp) return; // handle error
-
-    time_t t = time(NULL);
-    fprintf(fp, "%s - %s", response, ctime(&t));
-
+    if (!fp) return;
+    fprintf(fp, "%s - %s", msg, ctime(&(time_t){time(NULL)}));
     fclose(fp);
 }
 
-void showSessionInfo()
-{
-    time_t t = time(NULL);
-    printf("\n---------- BANK SYSTEM SESSION ----------\n");
-    printf("Date & Time: %s", ctime(&t));
-
+void showSessionInfo() {
+    FILE *fp = fopen("database/index.txt", "r");
     int count = 0;
-    FILE *fp = fopen("database/index.txt", "r"); // must maintain index.txt
-    if (fp)
-    {
-        char line[50];
-        while (fgets(line, sizeof(line), fp))
-        {
-            if (line[0] != '\n') // ignore empty lines
-                count++;
-        }
+    char a[20], n[50];
+
+    if (fp) {
+        while (fscanf(fp, "%19s %49s", a, n) == 2) count++;
         fclose(fp);
     }
 
-    printf("Loaded Accounts: %d\n", count);
+    printf("\n---------- BANK SYSTEM SESSION ----------\n");
+    printf("Date & Time: %s", ctime(&(time_t){time(NULL)}));
+    printf("Total Accounts: %d\n", count);
     printf("-----------------------------------------\n");
 }
 
@@ -109,11 +99,10 @@ int accountExists(char *id, int type)
 void input()
 {
     char input[20];
-    showSessionInfo();
 
-    while (1) // infinite loop until user chooses exit
+    while (1)
     {
-        printf("\n----- Main Menu & Session -----\n");
+        printf("\n---------- Main Menu & Session ----------\n");
         printf("1. Create New Bank Account\n");
         printf("2. Delete Bank Account\n");
         printf("3. Deposit\n");
@@ -121,7 +110,6 @@ void input()
         printf("5. Remittance\n");
         printf("6. Quit\n");
         printf("Enter your choice: ");
-
         scanf("%19s", &input);
 
         if (strcmp(input,"1") == 0 || strcasecmp(input,"create") == 0)
