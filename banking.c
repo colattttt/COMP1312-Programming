@@ -5,16 +5,19 @@
 
 void createAccount();
 void deleteAccount();
-void logTransaction(const char *action);
+void deposit();
+void withdrawal();
+void remittance();
 void showSessionInfo();
+void logTransaction(const char *response);
 
-void logTransaction(const char *action)
+void logTransaction(const char *response)
 {
     FILE *fp = fopen("database/transaction.log", "a");
     if (!fp) return; // handle error
 
     time_t t = time(NULL);
-    fprintf(fp, "%s - %s", action, ctime(&t));
+    fprintf(fp, "%s - %s", response, ctime(&t));
 
     fclose(fp);
 }
@@ -22,7 +25,7 @@ void logTransaction(const char *action)
 void showSessionInfo()
 {
     time_t t = time(NULL);
-    printf("\n===== BANK SYSTEM SESSION =====\n");
+    printf("\n---------- BANK SYSTEM SESSION ----------\n");
     printf("Date & Time: %s", ctime(&t));
 
     int count = 0;
@@ -39,7 +42,7 @@ void showSessionInfo()
     }
 
     printf("Loaded Accounts: %d\n", count);
-    printf("================================\n");
+    printf("-----------------------------------------\n");
 }
 
 int isLettersOnly(char *str)
@@ -60,21 +63,47 @@ int isLettersOnly(char *str)
 int accountExists(char *id, int type)
 {
     FILE *fp = fopen("database/index.txt", "r");
-    if (!fp) return 0; // no accounts
+    if (!fp) return 0;
 
-    char file_id[20];
-    int file_type;
-    while (fscanf(fp, "%19s %d", file_id, &file_type) == 2)
+    char accno[20], username[50];
+    char filepath[100];
+    char file_id[20] = "";
+    char file_type[20] = "";
+    char wantedType[20];
+    char line[200];
+
+    if (type == 1)
+        strcpy(wantedType, "Savings");
+    else
+        strcpy(wantedType, "Current");
+
+    while (fscanf(fp, "%s %s", accno, username) == 2)
     {
-        if (strcmp(file_id, id) == 0 && file_type == type)
+        sprintf(filepath, "database/%s.txt", accno);
+
+        FILE *acc = fopen(filepath, "r");
+        if (!acc)
+            continue;
+
+        file_id[0] = '\0';
+        file_type[0] = '\0';
+
+        while (fgets(line, sizeof(line), acc))
+        {
+            sscanf(line, "ID: %19s", file_id);
+            sscanf(line, "Account Type: %19s", file_type);
+        }
+        fclose(acc);
+
+        if (strcmp(file_id, id) == 0 && strcmp(file_type, wantedType) == 0)
         {
             fclose(fp);
-            return 1; // account exists
+            return 1;
         }
     }
 
     fclose(fp);
-    return 0; // not found
+    return 0;
 }
 
 void input()
@@ -84,7 +113,7 @@ void input()
 
     while (1) // infinite loop until user chooses exit
     {
-        printf("\n--- Main Menu & Session ---\n");
+        printf("\n----- Main Menu & Session -----\n");
         printf("1. Create New Bank Account\n");
         printf("2. Delete Bank Account\n");
         printf("3. Deposit\n");
@@ -108,17 +137,17 @@ void input()
         else if (strcmp(input, "3") == 0 || strcasecmp(input,"deposit") == 0)
         {
             logTransaction("Deposit");
-            printf("You selected Deposit.\n");
+            deposit();
         }
         else if (strcmp(input, "4") == 0 || strcasecmp(input,"withdrawal") == 0)
         {
             logTransaction("Withdrawal");
-            printf("You selected Withdrawal.\n");
+            withdrawal();
         }
         else if (strcmp(input, "5") == 0 || strcasecmp(input,"remittance") == 0)
         {
             logTransaction("Remittance");
-            printf("You selected Remittance.\n");
+            remittance();
         }
         else if (strcmp(input, "6") == 0 || strcasecmp(input,"quit") == 0)
         {
@@ -135,12 +164,12 @@ void input()
 
 void createAccount()
 {
-    char username[50], filepath[100], id[20], pin[5];
+    char username[50], filepath[100], id[20], pin[5], acctype[20];
     int type, accno;
     FILE *fp;
 
-    printf("\n--- Create Bank Account  ---\n");
-    printf("\nEnter your Username: ");
+    printf("\n----- Create Bank Account  -----\n");
+    printf("\nEnter your username: ");
     // Allow up to 49 characters for a string. To avoid crash or memory error if the user types too many characters.
     scanf("%49s", username);
 
@@ -150,7 +179,7 @@ void createAccount()
         return;
     }
 
-    printf("\nEnter your ID: ");
+    printf("Enter your ID: ");
     scanf("%19s", id);
 
     // Validate digits only
@@ -164,7 +193,7 @@ void createAccount()
         }
     }
 
-    printf("\nEnter Account Type:");
+    printf("Enter Account Type:");
     printf("\n1. Savings Account");
     printf("\n2. Current Account");
     printf("\nSelect Option: ");
@@ -174,7 +203,13 @@ void createAccount()
         while(getchar()!='\n');
         return; // restart
     }
+
+    if (type == 1)
+        strcpy(acctype, "Savings");
+    else
+        strcpy(acctype, "Current");
     
+
     // Check if account already exists
     if (accountExists(id, type))
     {
@@ -182,12 +217,13 @@ void createAccount()
         return;
     }
         
-    printf("\nEnter your 4-digit PIN: ");
-    scanf("%4s", pin);
+    printf("Enter your 4-digit PIN: ");
+    scanf("%9s", pin);
 
     if (strlen(pin) != 4)
     {
         printf("PIN must be 4 digits!\n");
+        while (getchar() != '\n'); 
         return;
     }
 
@@ -210,7 +246,8 @@ void createAccount()
         sprintf(filepath, "database/%d.txt", accno);
         fp = fopen(filepath, "r");
         if (fp != NULL) fclose(fp);
-    } while (fp != NULL);
+    } 
+    while (fp != NULL);
 
     // Create new user file
     fp = fopen(filepath, "w");
@@ -223,13 +260,13 @@ void createAccount()
     fprintf(fp, "Username: %s\n", username);
     fprintf(fp, "ID: %s\n", id); 
     fprintf(fp, "Account No: %d\n", accno);
-    fprintf(fp, "Account Type: %d\n", type);
+    fprintf(fp, "Account Type: %s\n", acctype);
     fprintf(fp, "PIN: %s\n", pin);
     fprintf(fp, "Amount: 0.00\n");
 
     fclose(fp);
 
-    logTransaction("Create Account");
+    logTransaction("Account Created Successfully");
 
     FILE *fp_index = fopen("database/index.txt", "a");
     if (fp_index) 
@@ -254,111 +291,564 @@ void createAccount()
 
 void deleteAccount()
 {
-    FILE *fp_index = fopen("database/index.txt", "r");
-    if (!fp_index)
-    {
-        printf("No accounts found.\n");
-        return;
-    }
-
     char accno[20], username[50];
-    while (fscanf(fp_index, "%19s %49s", accno, username) == 2)
-    {
-        strcpy(accnos[total], accno);
-        strcpy(usernames[total], username);
-        total++;
-        if (total >= 100) break; // safety limit
-    }
-    fclose(fp_index);
+    char listacc[100][20];
+    int option = 0, count = 0;
+    char selectedAcc[20];
 
-    if (total == 0)
+    FILE *fp = fopen("database/index.txt", "r");
+    if (!fp)
     {
         printf("No accounts found.\n");
         return;
     }
 
-    // Show numbered list
-    printf("Current accounts:\n");
-    for (int i = 0; i < total; i++)
-        printf("%d. %s %s\n", i + 1, accnos[i], usernames[i]);
+    printf("\n----- Delete Bank Account -----\n");
+    while (fscanf(fp, "%s %s", accno, username) == 2)
+    {   
+        strcpy(listacc[count], accno);
+        count++;
+    }
+    fclose(fp);
 
-    // Ask user to choose
-    int choice;
-    printf("Select Option: ");
-    if (scanf("%d", &choice) != 1 || choice < 1 || choice > total)
+    if (count == 0)
+    {
+        printf("No accounts found.\n");
+        return;
+    }
+
+    printf("Please choose an option (1-%d):\n\n", count);
+
+    // Open again to show accounts
+    fp = fopen("database/index.txt", "r");
+    int i = 1;
+    while (fscanf(fp, "%s %s", accno, username) == 2)
+    {
+        printf("%d. %s (%s)\n", i, accno, username);
+        i++;
+    }
+    fclose(fp);
+
+    printf("\nSelect option: ");
+    scanf("%d", &option);
+
+    if (option < 1 || option > count)
     {
         printf("Invalid choice.\n");
-        while(getchar()!='\n'); // clear buffer
         return;
     }
 
-    char selected_acc[20];
-    strcpy(selected_acc, accnos[choice - 1]);
+    // Selected account number
+    strcpy(selectedAcc, listacc[option - 1]);
 
-    // Ask for last 4 of ID and PIN
-    char last4ID[5], pin[5];
+    // Ask for ID last 4 digits + PIN
+    char lastID[5], pin[5];
     printf("Enter last 4 digits of ID: ");
-    scanf("%4s", last4ID);
+    scanf("%4s", lastID);
     printf("Enter 4-digit PIN: ");
     scanf("%4s", pin);
 
-    // Open account file to verify
+    // Open the selected account file
     char filepath[100];
-    sprintf(filepath, "database/%s.txt", selected_acc);
+    sprintf(filepath, "database/%s.txt", selectedAcc);
 
-    FILE *fp_acc = fopen(filepath, "r");
-    if (!fp_acc)
+    FILE *accFile = fopen(filepath, "r");
+    if (!accFile)
     {
-        printf("Account file not found!\n");
+        printf("Account not found.\n");
         return;
     }
 
-    char storedID[20] = "", storedPIN[5] = "", line[100];
-    while (fgets(line, sizeof(line), fp_acc))
-    {
-        if (sscanf(line, "ID: %19s", storedID) == 1) continue;
-        if (sscanf(line, "PIN: %4s", storedPIN) == 1) continue;
-    }
-    fclose(fp_acc);
+    // Read stored ID and PIN
+    char storedID[20] = "", storedPIN[10] = "";
+    char line[100];
 
-    int len = strlen(storedID);
-    if (len < 4 || strcmp(last4ID, storedID + len - 4) != 0 || strcmp(pin, storedPIN) != 0)
+    while (fgets(line, sizeof(line), accFile))
     {
-        printf("Authentication failed! Account not deleted.\n");
+        sscanf(line, "ID: %19s", storedID);
+        sscanf(line, "PIN: %9s", storedPIN);
+    }
+    fclose(accFile);
+
+    // Validate last 4 digits and PIN
+    int len = strlen(storedID);
+    if (len < 4 || strcmp(lastID, storedID + len - 4) != 0 || strcmp(pin, storedPIN) != 0)
+    {
+        printf("Wrong ID digits or PIN. Delete unsuccessful.\n");
         return;
     }
 
     // Delete account file
     if (remove(filepath) == 0)
-        printf("Account file deleted successfully.\n");
+    {
+        printf("Account file deleted.\n");
+    }
     else
     {
-        printf("Error deleting account file.\n");
+        printf("Failed to delete file.\n");
         return;
     }
 
-    // Update index.txt by skipping the deleted account
-    FILE *fp_old = fopen("database/index.txt", "r");
-    FILE *fp_new = fopen("database/temp.txt", "w");
-    char temp_acc[20], temp_username[50];
+    FILE *old = fopen("database/index.txt", "r");
+    FILE *temp = fopen("database/temp.txt", "w");
 
-    while (fscanf(fp_old, "%19s %49s", temp_acc, temp_username) == 2)
+    while (fscanf(old, "%19s %49s", accno, username) == 2)
     {
-        if (strcmp(temp_acc, selected_acc) != 0)
-            fprintf(fp_new, "%s %s\n", temp_acc, temp_username);
+        if (strcmp(accno, selectedAcc) != 0)
+        {
+            fprintf(temp, "%s %s\n", accno, username);
+        }
     }
 
-    fclose(fp_old);
-    fclose(fp_new);
-
+    fclose(old);
+    fclose(temp);
     remove("database/index.txt");
     rename("database/temp.txt", "database/index.txt");
 
-    logTransaction("Delete Account");
+    logTransaction("Account Deleted Successfully");
+    printf("Account deleted successfully.\n");
+}
+
+void deposit()
+{
+    char accno[20], username[50];
+    char listacc[100][20];
+    int option = 0, count = 0;
+    char selectedAcc[20];
+
+    FILE *fp = fopen("database/index.txt", "r");
+    if (!fp)
+    {
+        printf("No accounts found.\n");
+        return;
+    }
+
+    printf("\n------- Deposit -------\n");
+    while (fscanf(fp, "%s %s", accno, username) == 2)
+    {   
+        strcpy(listacc[count], accno);
+        count++;
+    }
+    fclose(fp);
+
+    if (count == 0)
+    {
+        printf("No accounts found.\n");
+        return;
+    }
+
+    printf("Please choose an option (1-%d):\n\n", count);
+
+    // Show account list again
+    fp = fopen("database/index.txt", "r");
+    int i = 1;
+    while (fscanf(fp, "%s %s", accno, username) == 2)
+    {
+        printf("%d. %s (%s)\n", i, accno, username);
+        i++;
+    }
+    fclose(fp);
+
+    printf("\nSelect option: ");
+    scanf("%d", &option);
+
+    if (option < 1 || option > count)
+    {
+        printf("Invalid choice.\n");
+        return;
+    }
+
+    // Selected account number
+    strcpy(selectedAcc, listacc[option - 1]);
+
+    char pin[5], storedPIN[10];
+    printf("Enter 4-digit PIN: ");
+    scanf("%4s", pin);
+
+    // Open the selected account file
+    char filepath[100];
+    sprintf(filepath, "database/%s.txt", selectedAcc);
+
+    FILE *accFile = fopen(filepath, "r");
+    if (!accFile)
+    {
+        printf("Account not found.\n");
+        return;
+    }
+
+    float balance = 0;
+    char line[200], storedID[20]="";
+    
+    while (fgets(line, sizeof(line), accFile))
+    {
+        sscanf(line, "PIN: %9s", storedPIN);
+        sscanf(line, "Amount: %f", &balance);
+    }
+    fclose(accFile);
+
+    if (strcmp(pin, storedPIN) != 0)
+    {
+        printf("Wrong PIN. Deposit cancelled.\n");
+        return;
+    }
+
+    // Deposit
+    float depositAmt;
+    printf("Enter deposit amount: ");
+    if (scanf("%f", &depositAmt) != 1 || depositAmt <= 0 || depositAmt > 50000)
+    {
+        printf("Invalid amount. Enter RM1 to RM50000.\n");
+        while(getchar()!='\n');
+        return;
+    }
+
+    balance += depositAmt;
+
+    // Update file
+    accFile = fopen(filepath, "r");
+    FILE *temp = fopen("database/temp.txt", "w");
+
+    while (fgets(line, sizeof(line), accFile))
+    {
+        if (strncmp(line, "Amount:", 7) == 0)
+            fprintf(temp, "Amount: %.2f\n", balance);
+        else
+            fputs(line, temp);
+    }
+
+    fclose(accFile);
+    fclose(temp);
+
+    remove(filepath);
+    rename("database/temp.txt", filepath);
+
+    logTransaction("Deposit Successful");
+
+    printf("Deposit successful! \nNew balance: RM %.2f\n", balance);
+}
+
+void withdrawal()
+{
+    char accno[20], username[50];
+    char listacc[100][20];
+    int option = 0, count = 0;
+    char selectedAcc[20];
+
+    FILE *fp = fopen("database/index.txt", "r");
+    if (!fp)
+    {
+        printf("No accounts found.\n");
+        return;
+    }
+
+    printf("\n------- Withdrawal -------\n");
+    while (fscanf(fp, "%s %s", accno, username) == 2)
+    {   
+        strcpy(listacc[count], accno);
+        count++;
+    }
+    fclose(fp);
+
+    if (count == 0)
+    {
+        printf("No accounts found.\n");
+        return;
+    }
+
+    printf("Please choose an option (1-%d):\n\n", count);
+
+    // Show account list again
+    fp = fopen("database/index.txt", "r");
+    int i = 1;
+    while (fscanf(fp, "%s %s", accno, username) == 2)
+    {
+        printf("%d. %s (%s)\n", i, accno, username);
+        i++;
+    }
+    fclose(fp);
+
+    printf("\nSelect option: ");
+    scanf("%d", &option);
+
+    if (option < 1 || option > count)
+    {
+        printf("Invalid choice.\n");
+        return;
+    }
+
+    // Selected account number
+    strcpy(selectedAcc, listacc[option - 1]);
+
+    char pin[5], storedPIN[10];
+    printf("Enter 4-digit PIN: ");
+    scanf("%4s", pin);
+
+    // Open the selected account file
+    char filepath[100];
+    sprintf(filepath, "database/%s.txt", selectedAcc);
+
+    FILE *accFile = fopen(filepath, "r");
+    if (!accFile)
+    {
+        printf("Account not found.\n");
+        return;
+    }
+
+    float balance = 0;
+    char line[200], storedID[20]="";
+    
+    while (fgets(line, sizeof(line), accFile))
+    {
+        sscanf(line, "PIN: %9s", storedPIN);
+        sscanf(line, "Amount: %f", &balance);
+    }
+    fclose(accFile);
+
+    if (strcmp(pin, storedPIN) != 0)
+    {
+        printf("Wrong PIN. Withdrawal cancelled.\n");
+        return;
+    }
+
+    printf("Current balance: RM %.2f\n", balance);
+
+    float withdrawalAmt;
+    printf("Enter withdrawal amount: ");
+    if (scanf("%f", &withdrawalAmt) != 1 || withdrawalAmt <= 0 || withdrawalAmt > 50000)
+    {
+        printf("Invalid amount. Enter RM1 to RM50000.\n");
+        while(getchar()!='\n');
+        return;
+    }
+
+    if (withdrawalAmt > balance)
+    {
+        printf("Insufficient balance! You only have RM %.2f.\n", balance);
+        return;
+    }
+
+    balance -= withdrawalAmt;
+
+    // Update file
+    accFile = fopen(filepath, "r");
+    FILE *temp = fopen("database/temp.txt", "w");
+
+    while (fgets(line, sizeof(line), accFile))
+    {
+        if (strncmp(line, "Amount:", 7) == 0)
+            fprintf(temp, "Amount: %.2f\n", balance);
+        else
+            fputs(line, temp);
+    }
+
+    fclose(accFile);
+    fclose(temp);
+
+    remove(filepath);
+    rename("database/temp.txt", filepath);
+
+    logTransaction("Withdrawal Successful");
+
+    printf("Withdrawal successful! \nNew balance: RM %.2f\n", balance);
+}
+
+void remittance()
+{
+    char accno[20], username[50];
+    char listacc[100][20];
+    int sender = 0, receiver = 0, count = 0;
+
+    FILE *fp = fopen("database/index.txt", "r");
+    if (!fp)
+    {
+        printf("No accounts found.\n");
+        return;
+    }
+
+    printf("\n------- Remittance -------\n");
+    while (fscanf(fp, "%s %s", accno, username) == 2)
+    {   
+        strcpy(listacc[count], accno);
+        count++;
+    }
+    fclose(fp);
+
+    if (count < 2)
+    {
+        printf("Need at least TWO accounts to perform remittance.\n");
+        return;
+    }
+
+    printf("Available accounts (1-%d):\n\n", count);
+
+    // Show account list again
+    fp = fopen("database/index.txt", "r");
+    int i = 1;
+    while (fscanf(fp, "%s %s", accno, username) == 2)
+    {
+        printf("%d. %s (%s)\n", i, accno, username);
+        i++;
+    }
+    fclose(fp);
+
+    // sender
+    printf("\nSelect sender account: ");
+    scanf("%d", &sender);
+
+    if (sender < 1 || sender > count)
+    {
+        printf("Invalid sender account.\n");
+        return;
+    }
+
+    // receiver
+    printf("Select receiver account: ");
+    scanf("%d", &receiver);
+
+    if (receiver < 1 || receiver > count)
+    {
+        printf("Invalid receiver account.\n");
+        return;
+    }
+
+    if (sender == receiver)
+    {
+        printf("Sender and receiver cannot be the same.\n");
+        return;
+    }
+
+    char senderAcc[20], receiverAcc[20];
+    strcpy(senderAcc, listacc[sender - 1]);
+    strcpy(receiverAcc, listacc[receiver - 1]);
+
+    // Sender PIN
+    char pin[5], storedPIN[10];
+    printf("Enter sender 4-digit PIN: ");
+    scanf("%4s", pin);
+
+    char senderfp[100], receiverfp[100];
+    sprintf(senderfp, "database/%s.txt", senderAcc);
+    sprintf(receiverfp, "database/%s.txt", receiverAcc);
+
+    float senderBalance = 0, receiverBalance = 0;
+    char senderType[20] = "", receiverType[20] = "";
+    char line[200];
+
+    // read sender file
+    FILE *fs = fopen(senderfp, "r");
+    if (!fs)
+    {
+        printf("Sender account file missing.\n");
+        return;
+    }
+    
+    while (fgets(line, sizeof(line), fs))
+    {
+        sscanf(line, "PIN: %9s", storedPIN);
+        sscanf(line, "Amount: %f", &senderBalance);
+        sscanf(line, "Account Type: %19s", senderType);
+    }
+    fclose(fs);
+
+    if (strcmp(pin, storedPIN) != 0)
+    {
+        printf("Wrong sender PIN. Remittance cancelled.\n");
+        return;
+    }
+
+    // read receiver file
+    FILE *fr = fopen(receiverfp, "r");
+    if (!fr)
+    {
+        printf("Receiver account file missing.\n");
+        return;
+    }
+    while (fgets(line, sizeof(line), fr))
+    {
+        sscanf(line, "Amount: %f", &receiverBalance);
+        sscanf(line, "Account Type: %19s", receiverType);
+    }
+    fclose(fr);
+
+    float amt;
+    printf("Enter remittance amount: RM ");
+    scanf("%f", &amt);
+
+    if (amt <= 0)
+    {
+        printf("Invalid amount.\n");
+        return;
+    }
+    if (amt > senderBalance)
+    {
+        printf("Insufficient balance! You only have RM %.2f.\n", senderBalance);
+        return;
+    }
+
+    float fee = 0;
+    if (strcmp(senderType, "Savings") == 0 && strcmp(receiverType, "Current") == 0)
+    {
+        fee = amt * 0.02;
+    }
+    else if (strcmp(senderType, "Current") == 0 && strcmp(receiverType, "Savings") == 0)
+    {
+        fee = amt * 0.03;
+    }
+
+    float total = amt + fee;
+    if (total > senderBalance)
+    {
+        printf("Insufficient balance to cover amount and fee of RM %.2f.\n", total);
+        return;
+    }
+
+    senderBalance -= total;
+    receiverBalance += amt;
+
+    fs = fopen(senderfp, "r");
+    FILE *tempS = fopen("database/tempS.txt", "w");
+    while (fgets(line, sizeof(line), fs))
+    {
+        if (strncmp(line, "Amount:", 7) == 0)
+            fprintf(tempS, "Amount: %.2f\n", senderBalance);
+        else
+            fputs(line, tempS);
+    }
+    fclose(fs);
+    fclose(tempS);
+    remove(senderfp);
+    rename("database/tempS.txt", senderfp);
+
+    fr = fopen(receiverfp, "r");
+    FILE *tempR = fopen("database/tempR.txt", "w");
+    while (fgets(line, sizeof(line), fr))
+    {
+        if (strncmp(line, "Amount:", 7) == 0)
+            fprintf(tempR, "Amount: %.2f\n", receiverBalance);
+        else
+            fputs(line, tempR);
+    }
+
+    fclose(fr);
+    fclose(tempR);
+    remove(receiverfp);
+    rename("database/tempR.txt", receiverfp);
+
+    logTransaction("Remittance Successful");
+
+    printf("\nRemittance successful!\n");
+    printf("Amount transferred: RM %.2f\n", amt);
+    printf("Fee charged: RM %.2f\n", fee);
+    printf("Sender new balance: RM %.2f\n", senderBalance);
+    printf("Receiver new balance: RM %.2f\n", receiverBalance);
 }
 
 int main()
 {
+    system("mkdir database >nul 2>&1");
     input();
     return 0 ;
 }
+
+// instruction manual (it must consist how to use the code, github link)
+//要做instruction manual 还有 documentation （inst manual 是要教user怎样step by step做 account，deposit， withdrawal那些）（documentation 是解释你的code在干嘛 example可以ss一个 function 讲这个function 在干什么 那个东西在zmk）
