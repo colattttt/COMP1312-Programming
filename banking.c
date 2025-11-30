@@ -458,12 +458,14 @@ void withdrawal()
     printf("Current balance: RM %.2f\n", currentBalance);
 
     float withdrawAmount = getValidAmount("Enter withdrawal amount: RM ");
-    if (withdrawAmount < 0) {
+    if (withdrawAmount < 0) 
+    {
         printf("Invalid amount. Enter 1 to 50000.\n");
         return;
     }
 
-    if (withdrawAmount > currentBalance) {
+    if (withdrawAmount > currentBalance) 
+    {
         printf("Insufficient balance. You only have RM %.2f.\n", currentBalance);
         return;
     }
@@ -477,196 +479,84 @@ void withdrawal()
 
 void remittance()
 {
-    char accno[20], username[50];
-    char listacc[100][20];
-    int sender = 0, receiver = 0, count = 0;
-
-    FILE *fp = fopen("database/index.txt", "r");
-    if (!fp)
-    {
-        printf("No accounts found.\n");
-        return;
-    }
-
-    printf("\n------- Remittance -------\n");
-    while (fscanf(fp, "%s %s", accno, username) == 2)
-    {   
-        strcpy(listacc[count], accno);
-        count++;
-    }
-    fclose(fp);
-
-    if (count < 2)
-    {
-        printf("Need at least TWO accounts to perform remittance.\n");
-        return;
-    }
-
-    printf("Available accounts (1-%d):\n\n", count);
-
-    // Show account list again
-    fp = fopen("database/index.txt", "r");
-    int i = 1;
-    while (fscanf(fp, "%s %s", accno, username) == 2)
-    {
-        printf("%d. %s (%s)\n", i, accno, username);
-        i++;
-    }
-    fclose(fp);
-
-    // sender
-    printf("\nSelect sender account: ");
-    scanf("%d", &sender);
-
-    if (sender < 1 || sender > count)
-    {
-        printf("Invalid sender account.\n");
-        return;
-    }
-
-    // receiver
-    printf("Select receiver account: ");
-    scanf("%d", &receiver);
-
-    if (receiver < 1 || receiver > count)
-    {
-        printf("Invalid receiver account.\n");
-        return;
-    }
-
-    if (sender == receiver)
-    {
-        printf("Sender and receiver cannot be the same.\n");
-        return;
-    }
-
     char senderAcc[20], receiverAcc[20];
-    strcpy(senderAcc, listacc[sender - 1]);
-    strcpy(receiverAcc, listacc[receiver - 1]);
 
-    // Sender PIN
-    char pin[5], storedPIN[10];
-    printf("Enter sender 4-digit PIN: ");
-    scanf("%4s", pin);
+    printf("\n-------------- Remittance ---------------\n");
 
-    char senderfp[100], receiverfp[100];
-    sprintf(senderfp, "database/%s.txt", senderAcc);
-    sprintf(receiverfp, "database/%s.txt", receiverAcc);
-
-    float senderBalance = 0, receiverBalance = 0;
-    char senderType[20] = "", receiverType[20] = "";
-    char line[200];
-
-    // read sender file
-    FILE *fs = fopen(senderfp, "r");
-    if (!fs)
+    printf("Select sender account:\n");
+    if (!selectAccount(senderAcc)) 
     {
-        printf("Sender account file missing.\n");
-        return;
-    }
-    
-    while (fgets(line, sizeof(line), fs))
-    {
-        sscanf(line, "PIN: %9s", storedPIN);
-        sscanf(line, "Amount: %f", &senderBalance);
-        sscanf(line, "Account Type: %19s", senderType);
-    }
-    fclose(fs);
-
-    if (strcmp(pin, storedPIN) != 0)
-    {
-        printf("Wrong sender PIN. Remittance cancelled.\n");
         return;
     }
 
-    // read receiver file
-    FILE *fr = fopen(receiverfp, "r");
-    if (!fr)
+    printf("Select receiver account:\n");
+    if (!selectAccount(receiverAcc)) 
     {
-        printf("Receiver account file missing.\n");
-        return;
-    }
-    while (fgets(line, sizeof(line), fr))
-    {
-        sscanf(line, "Amount: %f", &receiverBalance);
-        sscanf(line, "Account Type: %19s", receiverType);
-    }
-    fclose(fr);
-
-    float amt;
-    printf("Enter remittance amount: RM ");
-    scanf("%f", &amt);
-
-    if (amt <= 0)
-    {
-        printf("Invalid amount.\n");
-        return;
-    }
-    if (amt > senderBalance)
-    {
-        printf("Insufficient balance! You only have RM %.2f.\n", senderBalance);
         return;
     }
 
-    float fee = 0;
-    if (strcmp(senderType, "Savings") == 0 && strcmp(receiverType, "Current") == 0)
+    if (strcmp(senderAcc, receiverAcc) == 0) 
     {
-        fee = amt * 0.02;
-    }
-    else if (strcmp(senderType, "Current") == 0 && strcmp(receiverType, "Savings") == 0)
-    {
-        fee = amt * 0.03;
-    }
-
-    float total = amt + fee;
-    if (total > senderBalance)
-    {
-        printf("Insufficient balance to cover amount and fee of RM %.2f.\n", total);
+        printf("Sender and receiver must be different accounts.\n");
         return;
     }
 
-    senderBalance -= total;
-    receiverBalance += amt;
+    float senderBalance, receiverBalance;
+    char senderType[20], receiverType[20];
 
-    fs = fopen(senderfp, "r");
-    FILE *tempS = fopen("database/tempS.txt", "w");
-    while (fgets(line, sizeof(line), fs))
+    if (!authenticateAccount(senderAcc, &senderBalance, senderType)) 
     {
-        if (strncmp(line, "Amount:", 7) == 0)
-            fprintf(tempS, "Amount: %.2f\n", senderBalance);
-        else
-            fputs(line, tempS);
-    }
-    fclose(fs);
-    fclose(tempS);
-    remove(senderfp);
-    rename("database/tempS.txt", senderfp);
-
-    fr = fopen(receiverfp, "r");
-    FILE *tempR = fopen("database/tempR.txt", "w");
-    while (fgets(line, sizeof(line), fr))
-    {
-        if (strncmp(line, "Amount:", 7) == 0)
-            fprintf(tempR, "Amount: %.2f\n", receiverBalance);
-        else
-            fputs(line, tempR);
+        return;
     }
 
-    fclose(fr);
-    fclose(tempR);
-    remove(receiverfp);
-    rename("database/tempR.txt", receiverfp);
+    loadAccountInfo(receiverAcc, NULL, NULL, receiverType, &receiverBalance);
+
+    float transferAmount = getValidAmount("Enter remittance amount: RM ");
+    if (transferAmount < 0) 
+    {
+        printf("Invalid amount. Enter 1 to 50000.\n");
+        return;
+    }
+
+    if (transferAmount > senderBalance) 
+    {
+        printf("Insufficient balance. You only have RM %.2f.\n", senderBalance);
+        return;
+    }
+
+    float fee = 0.00;
+    if (strcmp(senderType, "Savings") == 0 && strcmp(receiverType, "Current") == 0) 
+    {
+        fee = transferAmount * 0.02;   
+    }
+    else if (strcmp(senderType, "Current") == 0 && strcmp(receiverType, "Savings") == 0) 
+    {
+        fee = transferAmount * 0.03;   
+    }
+
+    float totalDeduction = transferAmount + fee;
+
+    if (totalDeduction > senderBalance) {
+        printf("Insufficient balance to cover amount and fee of RM %.2f.\n", totalDeduction);
+        return;
+    }
+
+    senderBalance -= totalDeduction;
+    receiverBalance += transferAmount;
+
+    updateAmount(senderAcc, senderBalance);
+    updateAmount(receiverAcc, receiverBalance);
 
     logTransaction("Remittance Successful");
 
     printf("\nRemittance successful!\n");
-    printf("Amount transferred: RM %.2f\n", amt);
+    printf("Amount transferred: RM %.2f\n", transferAmount);
     printf("Fee charged: RM %.2f\n", fee);
     printf("Sender new balance: RM %.2f\n", senderBalance);
     printf("Receiver new balance: RM %.2f\n", receiverBalance);
 }
 
-void input()
+void menu()
 {
     char input[20];
 
@@ -723,8 +613,7 @@ void input()
 
 int main()
 {
-    system("mkdir database >nul 2>&1");
-    input();
+    menu();
     return 0 ;
 }
 
