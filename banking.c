@@ -616,6 +616,3 @@ int main()
     menu();
     return 0 ;
 }
-
-// instruction manual (it must consist how to use the code, github link)
-//要做instruction manual 还有 documentation （inst manual 是要教user怎样step by step做 account，deposit， withdrawal那些）（documentation 是解释你的code在干嘛 example可以ss一个 function 讲这个function 在干什么 那个东西在zmk）
