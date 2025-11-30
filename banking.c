@@ -85,14 +85,22 @@ int selectAccount(char accOut[20]) {
         return 0;
     }
 
-    char acc[100][20], name[100][50];
+    char acc[100][20], name[100][50], text[200];
     int count = 0;
 
-    while (fscanf(fp, "%19s %49s", acc[count], name[count]) == 2) 
+    while (fgets(text, sizeof(text), fp)) 
     {
+        text[strcspn(text, "\n")] = '\0';   
+
+        char *bar = strchr(text, '|');
+        if (!bar) continue;               
+
+        *bar = '\0';                    
+        strcpy(acc[count], text);        
+        strcpy(name[count], bar + 1);      
+
         count++;
     }
-    fclose(fp);
 
     if (count == 0) 
     {
@@ -179,6 +187,43 @@ int loadAccountInfo(const char *accno, char *id, char *pin, char *type, float *a
     return 1;
 }
 
+int loadAccounts(char acc[100][20], char name[100][50]) {
+    FILE *fp = fopen("database/index.txt", "r");
+    if (!fp) 
+    {
+        return 0;
+    }
+
+    char text[200];
+    int count = 0;
+
+    while (fgets(text, sizeof(text), fp)) 
+    {
+        text[strcspn(text, "\n")] = '\0';   
+
+        char *bar = strchr(text, '|');
+        if (!bar) continue;
+
+        *bar = '\0';                 
+        strcpy(acc[count], text);   
+        strcpy(name[count], bar + 1);  
+
+        count++;
+    }
+
+    fclose(fp);
+    return count;
+}
+
+void showAccounts(char acc[100][20], char name[100][50], int count) 
+{
+    printf("\nAvailable accounts (1-%d):\n", count);
+    for (int i = 0; i < count; i++) 
+    {
+        printf("%d. %s %s\n", i + 1, acc[i], name[i]);
+    }
+}
+
 int authenticateAccount(const char *accno, float *returnedBalance, char *returnedType) {
     char filePIN[20], userPIN[5], type[20];
     float balance;
@@ -236,13 +281,13 @@ void createAccount()
 
     printf("\n---------- Create Bank Account ----------\n");
     printf("\nEnter your username: ");
-    // Allow up to 49 characters for a string. To avoid crash or memory error if the user types too many characters.
-    scanf("%49s", username);
+    scanf(" %[^\n]", username);
 
     for (int i = 0; username[i]; i++)
     {
-        if (!isalpha(username[i])) {
-            printf("Username must contain letters only!\n");
+        if (!isalpha(username[i]) && username[i] != ' ') 
+        {
+            printf("Username can only contain letters and spaces!\n");
             return;
         }
     }
@@ -263,7 +308,9 @@ void createAccount()
     printf("\n1. Savings Account");
     printf("\n2. Current Account");
     type = chooseInt("\nEnter account type: ", 1, 2);
+    
     if (type == -1) {
+        printf("Invalid choice! Please enter 1 or 2.\n");
         return;
     }
 
@@ -276,22 +323,28 @@ void createAccount()
 
     // Check if this ID already has this type
     FILE *fp = fopen("database/index.txt", "r");
-    char acc[20], name[50];
+    char text[200];
 
-    if (fp) 
+    while (fgets(text, sizeof(text), fp)) 
     {
-        while (fscanf(fp, "%19s %49s", acc, name) == 2) 
+        text[strcspn(text, "\n")] = '\0';
+
+        char *bar = strchr(text, '|');
+        if (!bar) continue;
+
+        *bar = '\0';          
+        char *accNum = text;  
+        char *fullName = bar + 1; 
+
+        char fileID[20], fileType[20];
+        loadAccountInfo(accNum, fileID, NULL, fileType, NULL);
+
+        if (strcmp(id, fileID) == 0 && strcmp(fileType, acctype) == 0) 
         {
-            char fileID[20], fileType[20];
-            loadAccountInfo(acc, fileID, NULL, fileType, NULL);
-            if (strcmp(id, fileID) == 0 && strcmp(fileType, acctype) == 0) 
-            {
-                printf("You already have this type of account.\n");
-                fclose(fp);
-                return;
-            }
+            printf("You already have this type of account.\n");
+            fclose(fp);
+            return;
         }
-        fclose(fp);
     }
     
     if (!getPIN(pin)) {
@@ -337,7 +390,7 @@ void createAccount()
     FILE *fp_index = fopen("database/index.txt", "a");
     if (fp_index) 
     {
-        fprintf(fp_index, "%d %s\n", accno,username); // or "%d %d\n", accno, type
+        fprintf(fp_index, "%d|%s\n", accno, username);
         fclose(fp_index);
     } 
     else 
@@ -346,13 +399,13 @@ void createAccount()
     }
 
     printf("\nAccount created successfully!\n");
-    printf("----------------------------------------\n");
+    printf("-----------------------------------------\n");
     printf("Username: %s\n",username);
     printf("ID: %s\n",id);
     printf("Account No: %d\n",accno);
     printf("Account Type:%s\n", (type == 1) ? "Savings" : "Current");
     printf("Amount: 0.00\n");
-    printf("----------------------------------------");
+    printf("-----------------------------------------");
 }
 
 void deleteAccount()
@@ -479,27 +532,41 @@ void withdrawal()
 
 void remittance()
 {
-    char senderAcc[20], receiverAcc[20];
+    char accList[100][20], nameList[100][50];
+
+    int count = loadAccounts(accList, nameList);
+    if (count < 2) {
+        printf("Need at least 2 accounts for remittance.\n");
+        return;
+    }
 
     printf("\n-------------- Remittance ---------------\n");
 
-    printf("Select sender account:\n");
-    if (!selectAccount(senderAcc)) 
+    showAccounts(accList, nameList, count);
+
+    int senderChoice = chooseInt("Select sender account: ", 1, count);
+    if (senderChoice == -1)
     {
+        printf("Invalid sender account! Please select a number between 1 and %d.\n", count);
         return;
     }
 
-    printf("Select receiver account:\n");
-    if (!selectAccount(receiverAcc)) 
+    int receiverChoice = chooseInt("Select receiver account: ", 1, count);
+    if (receiverChoice == -1) 
     {
+        printf("Invalid receiver account! Please select a number between 1 and %d.\n", count);
         return;
     }
 
-    if (strcmp(senderAcc, receiverAcc) == 0) 
+    if (senderChoice == receiverChoice) 
     {
         printf("Sender and receiver must be different accounts.\n");
         return;
     }
+
+    char senderAcc[20], receiverAcc[20];
+    strcpy(senderAcc, accList[senderChoice - 1]);
+    strcpy(receiverAcc, accList[receiverChoice - 1]);
 
     float senderBalance, receiverBalance;
     char senderType[20], receiverType[20];

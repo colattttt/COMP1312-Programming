@@ -1,0 +1,6 @@
+Username: Douglas Fredrich
+ID: 012288437512
+Account No: 10003641
+Account Type: Current
+PIN: 9947
+Amount: 520.00
