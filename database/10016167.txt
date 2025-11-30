@@ -1,0 +1,6 @@
+Username: ChinMay
+ID: 951762018460
+Account No: 10016167
+Account Type: Savings
+PIN: 9987
+Amount: 0.00
