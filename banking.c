@@ -4,14 +4,6 @@
 #include <ctype.h>
 #include <time.h>
 
-void createAccount();
-void deleteAccount();
-void deposit();
-void withdrawal();
-void remittance();
-void showSessionInfo();
-void logTransaction(const char *msg);
-
 void clearLine() {
     int c;
 
@@ -261,10 +253,20 @@ void logTransaction(const char *msg) {
 void showSessionInfo() {
     FILE *fp = fopen("database/index.txt", "r");
     int count = 0;
-    char a[20], n[50];
+    char line[200];
 
     if (fp) {
-        while (fscanf(fp, "%19s %49s", a, n) == 2) count++;
+
+        while (fgets(line, sizeof(line), fp)) 
+        {
+            line[strcspn(line, "\n")] = '\0';   
+
+            char *bar = strchr(line, '|');     
+            if (!bar) continue;             
+
+            count++;  
+        }
+
         fclose(fp);
     }
 
@@ -344,8 +346,11 @@ void createAccount()
             printf("You already have this type of account.\n");
             fclose(fp);
             return;
-        }
+
+        } 
     }
+
+    fclose(fp);
     
     if (!getPIN(pin)) {
     return;
@@ -446,20 +451,44 @@ void deleteAccount()
     printf("Account file deleted.\n");
 
     FILE *old = fopen("database/index.txt", "r");
-    FILE *temp = fopen("database/temp.txt", "w");
+    char accList[200][20], nameList[200][50];
+    int count = 0;
 
-    char idAcc[20], username[50];
+    if (old)
+    {
+        char line[200];
+        while (fgets(line, sizeof(line), old))
+        {
+            line[strcspn(line, "\n")] = '\0';
 
-    while (fscanf(old, "%19s %49s", idAcc, username) == 2) {
-        if (strcmp(idAcc, accno) != 0) {
-            fprintf(temp, "%s %s\n", idAcc, username);
+            char *bar = strchr(line, '|');
+            if (!bar)
+                continue;
+
+            *bar = '\0';
+            strcpy(accList[count], line); 
+            strcpy(nameList[count], bar + 1); 
+            count++;
+        }
+        fclose(old);
+    }
+
+    FILE *newFile = fopen("database/index.txt", "w");
+    if (!newFile)
+    {
+        printf("Error rewriting index file.\n");
+        return;
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        if (strcmp(accList[i], accno) != 0)   
+        {
+            fprintf(newFile, "%s|%s\n", accList[i], nameList[i]);
         }
     }
 
-    fclose(old);
-    fclose(temp);
-    remove("database/index.txt");
-    rename("database/temp.txt", "database/index.txt");
+    fclose(newFile);
 
     logTransaction("Account Deleted Successfully");
     printf("Account deleted successfully.\n");
@@ -638,7 +667,7 @@ void menu()
         printf("5. Remittance\n");
         printf("6. Quit\n");
         printf("Enter your choice: ");
-        scanf("%19s", &input);
+        scanf("%19s", input);
 
         if (strcmp(input,"1") == 0 || strcasecmp(input,"create") == 0)
         {

@@ -1,0 +1,6 @@
+Username: Kim Jisoo
+ID: 941100785741
+Account No: 10001259
+Account Type: Savings
+PIN: 9988
+Amount: 0.00
