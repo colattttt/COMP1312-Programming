@@ -297,11 +297,15 @@ void createAccount()
     printf("Enter your ID: ");
     scanf("%19s", id);
 
-    // Validate digits only
-    for (int i = 0; id[i]; i++)
-    {
+    if (strlen(id) != 12) {
+        printf("Invalid ID! It must be exactly 12 digits.\n");
+        return;
+    }
+
+
+    for (int i = 0; i < 12; i++) {
         if (!isdigit(id[i])) {
-            printf("Invalid ID! Must contain numbers only.\n");
+            printf("Invalid ID! Only numbers (0-9) are allowed.\n");
             return;
         }
     }
@@ -684,7 +688,7 @@ void menu()
             logTransaction("Deposit");
             deposit();
         }
-        else if (strcmp(input, "4") == 0 || strcasecmp(input,"withdrawal") == 0)
+        else if (strcmp(input, "4") == 0 || strcasecmp(input,"withdraw") == 0)
         {
             logTransaction("Withdrawal");
             withdrawal();
