@@ -5,6 +5,9 @@
 #include <time.h>
 
 void clearLine() {
+    // Clears the input buffer by removing all characters until the newline.
+    // Prevents leftover input from affecting the next user entry.
+
     int c;
 
     while ((c = getchar()) != '\n' && c != EOF) 
@@ -15,6 +18,9 @@ void clearLine() {
 
 int getPIN(char savedPIN[5]) 
 {
+    // Reads a PIN from the user and checks that it is exactly 4 digits.
+    // Returns 1 if the PIN is valid and stores it in savedPIN, otherwise returns 0.
+
     char enteredPIN[10];
 
     printf("Enter 4-digit PIN: ");
@@ -41,7 +47,11 @@ int getPIN(char savedPIN[5])
     return 1;
 }
 
-int chooseInt(const char *prompt, int min, int max) {
+int chooseInt(const char *prompt, int min, int max) 
+{
+    // Displays a prompt and reads an integer from the user.
+    // Returns the number if it is within [min, max], otherwise returns -1.
+
     int x;
 
     printf("%s", prompt);
@@ -58,7 +68,11 @@ int chooseInt(const char *prompt, int min, int max) {
     return x;  
 }
 
-float getValidAmount(const char *prompt) {
+float getValidAmount(const char *prompt) 
+{
+    // Prompts the user for a money amount.
+    // Returns the value if it's between 1 and 50000; otherwise returns -1.
+
     float amt;
     printf("%s", prompt);
     if (scanf("%f", &amt) != 1) {
@@ -69,7 +83,12 @@ float getValidAmount(const char *prompt) {
     return amt;
 }
 
-int selectAccount(char accOut[20]) {
+int selectAccount(char accOut[20]) 
+{
+    // Loads all accounts from index.txt and shows them to the user.
+    // Lets the user choose an account number from the list.
+    // Returns 1 and stores the selected account in accOut, otherwise returns 0.
+
     FILE *fp = fopen("database/index.txt", "r");
     if (!fp) 
     {
@@ -118,7 +137,12 @@ int selectAccount(char accOut[20]) {
     return 1;
 }
 
-int updateAmount(const char *accno, float newAmount) {
+int updateAmount(const char *accno, float newAmount) 
+{
+    // Updates only the Amount field inside an account file.
+    // Copies all lines to a temp file, replaces the Amount line, then replaces the old file with the updated one.
+    // Returns 1 on success, 0 on failure. 
+
     char accountFile[100];
     char tempFile[100];
 
@@ -154,6 +178,10 @@ int updateAmount(const char *accno, float newAmount) {
 
 int loadAccountInfo(const char *accno, char *id, char *pin, char *type, float *amt)
 {
+    // Reads account details (ID, PIN, Type, Amount) from the account file.
+    // Copies the data into the provided output variables.
+    // Returns 1 if the file was read successfully, otherwise 0.
+
     char path[100];
     sprintf(path, "database/%s.txt", accno);
     FILE *fp = fopen(path, "r");
@@ -179,7 +207,12 @@ int loadAccountInfo(const char *accno, char *id, char *pin, char *type, float *a
     return 1;
 }
 
-int loadAccounts(char acc[100][20], char name[100][50]) {
+int loadAccounts(char acc[100][20], char name[100][50]) 
+{
+    // Reads all account numbers and names from index.txt.
+    // Stores them into the acc[] and name[] arrays.
+    // Returns the total number of accounts loaded.
+
     FILE *fp = fopen("database/index.txt", "r");
     if (!fp) 
     {
@@ -209,6 +242,9 @@ int loadAccounts(char acc[100][20], char name[100][50]) {
 
 void showAccounts(char acc[100][20], char name[100][50], int count) 
 {
+    // Displays the list of accounts with their numbers and names.
+    // Used when selecting sender or receiver accounts.
+
     printf("\nAvailable accounts (1-%d):\n", count);
     for (int i = 0; i < count; i++) 
     {
@@ -216,7 +252,12 @@ void showAccounts(char acc[100][20], char name[100][50], int count)
     }
 }
 
-int authenticateAccount(const char *accno, float *returnedBalance, char *returnedType) {
+int authenticateAccount(const char *accno, float *returnedBalance, char *returnedType) 
+{
+    // Verifies an account by checking the user’s PIN against the stored PIN.
+    // If the PIN is correct, it can also return the account balance and type.
+    // Returns 1 if authentication succeeds, otherwise 0.
+
     char filePIN[20], userPIN[5], type[20];
     float balance;
 
@@ -243,14 +284,21 @@ int authenticateAccount(const char *accno, float *returnedBalance, char *returne
     return 1;
 }
 
-void logTransaction(const char *msg) {
+void logTransaction(const char *msg) 
+{
+    // Records a transaction message with a timestamp into transaction.log.
+    // Used to track actions like create, delete, deposit, withdrawal, remittance, and quit.
+
     FILE *fp = fopen("database/transaction.log", "a");
     if (!fp) return;
     fprintf(fp, "%s - %s", msg, ctime(&(time_t){time(NULL)}));
     fclose(fp);
 }
 
-void showSessionInfo() {
+void showSessionInfo() 
+{
+    // This function displays the current session information, including date and time and the total number of accounts found in index.txt.
+
     FILE *fp = fopen("database/index.txt", "r");
     int count = 0;
     char line[200];
@@ -278,6 +326,11 @@ void showSessionInfo() {
 
 void createAccount()
 {
+    // This function creates a new bank account. It checks the username and 12-digit ID,
+    // ensures the user does not already have the same account type, generates a unique
+    // account number, saves the account into its own file, updates index.txt,
+    // and logs the creation action.
+
     char username[50], id[20], pin[5];
     int type;
 
@@ -419,6 +472,10 @@ void createAccount()
 
 void deleteAccount()
 {
+    // This function deletes an account.
+    // It checks the ID and PIN, removes the account's file,
+    // and updates index.txt so the deleted account is no longer listed.
+
     char accno[20];
 
     printf("\n---------- Delete Bank Account ----------\n");
@@ -500,6 +557,9 @@ void deleteAccount()
 
 void deposit()
 {
+    // This function handles the deposit process: the user selects an account, enters a valid
+    // deposit amount, passes PIN authentication, the new balance is calculated
+    // and saved, and the transaction is recorded in the log.
     char accno[20];
     printf("\n---------------- Deposit ----------------\n");
     if (!selectAccount(accno)) 
@@ -529,6 +589,10 @@ void deposit()
 
 void withdrawal()
 {
+    // This function handles the withdrawal process: the user selects an account, authenticates
+    // with a PIN, enters a valid amount, the system checks for sufficient funds,
+    // updates the balance, and logs the transaction.
+    
     char accno[20];
     printf("\n-------------- Withdrawal ---------------\n");
     if (!selectAccount(accno))
@@ -565,6 +629,11 @@ void withdrawal()
 
 void remittance()
 {
+    // This function handles money transfer between two accounts. The function loads all accounts,
+    // allows the user to choose a sender and receiver, verifies PIN for the sender,
+    // checks balance and calculates any applicable fee based on account types,
+    // updates both account balances, and logs the remittance action.
+
     char accList[100][20], nameList[100][50];
 
     int count = loadAccounts(accList, nameList);
@@ -658,6 +727,13 @@ void remittance()
 
 void menu()
 {
+    // Displays the main menu and controls overall program flow.
+    // This function runs continuously, shows session information,
+    // reads the user’s menu choice, and calls the appropriate
+    // banking operation (create, delete, deposit, withdrawal,
+    // remittance, or exit). Each action is also written to the
+    // transaction log. The loop only ends when the user chooses to quit.
+
     char input[20];
 
     while (1)
@@ -713,6 +789,9 @@ void menu()
 
 int main()
 {
+    // Program entry point. 
+    // Starts the banking system by calling the main menu function.
+    // The program runs until the user chooses to exit.
     menu();
     return 0 ;
 }

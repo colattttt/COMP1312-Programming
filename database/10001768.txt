@@ -3,4 +3,4 @@ ID: 1088689216
 Account No: 10001768
 Account Type: Current
 PIN: 1146
-Amount: 4797.50
+Amount: 54827.00
