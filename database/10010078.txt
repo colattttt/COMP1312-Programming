@@ -1,5 +1,0 @@
-Username:PohShiu
-ID: 041122010815
-Account No: 10010078
-Account Type: Savings
-Amount: 0.00

@@ -1,0 +1,6 @@
+Username: Lim Poh Shiu
+ID: 041122015588
+Account No: 10009299
+Account Type: Current
+PIN: 8755
+Amount: 2500.00

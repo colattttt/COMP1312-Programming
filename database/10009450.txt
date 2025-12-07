@@ -1,6 +1,0 @@
-Username: Poh Shiu
-ID: 032244510456
-Account No: 10009450
-Account Type: Savings
-PIN: 8877
-Amount: 459.60

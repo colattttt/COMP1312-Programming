@@ -1,6 +1,0 @@
-Username: PS
-ID: 051188035625
-Account No: 10005401
-Account Type: Savings
-PIN: 3396
-Amount: 50090.00

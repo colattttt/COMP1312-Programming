@@ -1,6 +1,0 @@
-Username: HernChong
-ID: 710416015625
-Account No: 10016091
-Account Type: Savings
-PIN: 1145
-Amount: 750.00

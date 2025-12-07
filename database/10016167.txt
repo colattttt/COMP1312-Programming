@@ -1,6 +1,0 @@
-Username: Chin May
-ID: 951762018460
-Account No: 10016167
-Account Type: Savings
-PIN: 9987
-Amount: 4951.00

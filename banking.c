@@ -248,7 +248,7 @@ void showAccounts(char acc[100][20], char name[100][50], int count)
     printf("\nAvailable accounts (1-%d):\n", count);
     for (int i = 0; i < count; i++) 
     {
-        printf("%d. %s %s\n", i + 1, acc[i], name[i]);
+        printf("%d. %s (%s)\n", i + 1, acc[i], name[i]);
     }
 }
 

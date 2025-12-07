@@ -1,0 +1,6 @@
+Username: Lim Poh Shiu
+ID: 041122015588
+Account No: 10008982
+Account Type: Savings
+PIN: 0327
+Amount: 5000.00
